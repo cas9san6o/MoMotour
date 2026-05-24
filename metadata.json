@@ -1,0 +1,8 @@
+{
+  "name": "MoMotour v. 1.3",
+  "description": "Un organizzatore di viaggi itineranti completamente gratuito, mobile-first, senza login.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
