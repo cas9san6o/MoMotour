@@ -82,6 +82,16 @@ export function MoMoStudio() {
     setIsSheetOpen(true);
   }, []);
 
+  const [browserMode, setBrowserMode] = useState({ isOpen: false, url: '' });
+
+  const handleOpenBrowser = (url) => {
+    setBrowserMode({ isOpen: true, url });
+  };
+
+  const closeBrowser = () => {
+    setBrowserMode({ isOpen: false, url: '' });
+  };
+
   if (tappe.length === 0) {
     return (
       <div className="p-4 flex flex-col items-center justify-center h-full min-h-[60vh] animate-fade-in text-center">
@@ -156,6 +166,7 @@ export function MoMoStudio() {
             const { id, ...suggWithoutId } = sugg;
             openAddSheet(suggWithoutId);
           }} 
+          onOpenLink={handleOpenBrowser}
         />
       </div>
 
@@ -179,6 +190,32 @@ export function MoMoStudio() {
           onSubmit={handleSaveAttivita} 
         />
       </BottomSheet>
+
+      {/* IN-APP BROWSER */}
+      {browserMode.isOpen && (
+        <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-slide-up">
+           <div className="bg-gray-100 flex items-center p-3 border-b border-gray-200 gap-3">
+              <button onClick={closeBrowser} className="p-2 bg-white rounded-full text-gray-800 shadow-sm active:scale-95">
+                 Chiudi
+              </button>
+              <div className="flex-1 text-xs truncate bg-white py-2 px-3 rounded-xl border border-gray-200">
+                  {browserMode.url}
+              </div>
+              <a href={browserMode.url} target="_blank" rel="noopener noreferrer" onClick={closeBrowser} className="p-2 bg-white rounded-full text-blue-600 shadow-sm active:scale-95 text-sm font-medium">
+                 Tab
+              </a>
+           </div>
+           <iframe 
+              src={browserMode.url} 
+              className="w-full flex-1 bg-white" 
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              onError={() => {
+                  window.open(browserMode.url, '_blank');
+                  closeBrowser();
+              }}
+           />
+        </div>
+      )}
     </div>
   );
 }

@@ -92,10 +92,13 @@ export function TopBar() {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 h-14 bg-white z-50 px-4 flex items-center justify-between border-b border-gray-100 shadow-sm transition-all duration-300 ease-in-out">
-        <div className="flex items-center gap-1 font-bold text-lg text-[#222222] font-heading">
+        <button 
+          onClick={() => navigate('/')}
+          className="flex items-center gap-1 font-bold text-lg text-[#222222] font-heading hover:opacity-80 active:scale-95 transition-all text-left"
+        >
           <span>MoMotour</span>
           <span className="w-2 h-2 rounded-full bg-[#FF5A5F] mt-1"></span>
-        </div>
+        </button>
         
         <h1 
           className="font-medium text-sm text-[#222222] truncate max-w-[150px] sm:max-w-xs cursor-pointer hover:underline"

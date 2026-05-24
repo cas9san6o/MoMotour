@@ -40,7 +40,7 @@ export const getCountryFromCoords = async (lat, lng) => {
        }
     }
   } catch (err) {
-    console.error('Error fetching country from Nominatim:', err);
+    // console.error('Error fetching country from Nominatim:', err);
   }
   
   // fallback bbox

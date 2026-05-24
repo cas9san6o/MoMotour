@@ -1,4 +1,6 @@
 import React, { createContext, useReducer, useEffect } from 'react';
+import { calcolaDistanzaOSRM } from '../utils/fuelCalc';
+import { stimaPedaggi } from '../utils/tolls';
 
 const initialState = {
   tappe: [],           // Array di oggetti tappa
@@ -8,7 +10,9 @@ const initialState = {
   attivita: {},        // Oggetto chiave=tappaId
   tourName: "",        // Nome itinerario corrente
   tourType: "generic", // Tipo viaggio
-  budgetTotale: 0      // Budget totale impostato dall'utente
+  budgetTotale: 2000,  // Budget totale impostato dall'utente
+  distanzaKm: 0,       // Calcolata in background
+  pedaggiStima: { total: 0, breakdown: {} } // Calcolata in background
 };
 
 const STORAGE_KEY = 'momtour_state';
@@ -17,7 +21,9 @@ function loadState() {
   try {
     const item = window.localStorage.getItem(STORAGE_KEY);
     const parsed = item ? JSON.parse(item) : initialState;
-    if (parsed.budgetTotale === undefined) parsed.budgetTotale = 0;
+    if (parsed.budgetTotale === undefined || parsed.budgetTotale === 0) parsed.budgetTotale = 2000;
+    if (parsed.distanzaKm === undefined) parsed.distanzaKm = 0;
+    if (parsed.pedaggiStima === undefined) parsed.pedaggiStima = { total: 0, breakdown: {} };
     return parsed;
   } catch (error) {
     console.warn("Failed to load state", error);
@@ -27,6 +33,8 @@ function loadState() {
 
 function tourReducer(state, action) {
   switch (action.type) {
+    case 'CLEAR_ALL':
+      return { ...initialState };
     case 'ADD_TAPPA':
       return { ...state, tappe: [...state.tappe, action.payload] };
     case 'REMOVE_TAPPA':
@@ -105,12 +113,41 @@ function tourReducer(state, action) {
       return { ...state, tourType: action.payload };
     case 'SET_BUDGET_TOTALE':
       return { ...state, budgetTotale: action.payload };
+    case 'SET_TS_ESTIMATES':
+      return { ...state, distanzaKm: action.payload.distanzaKm, pedaggiStima: action.payload.pedaggiStima };
     default:
       return state;
   }
 }
 
 export const TourContext = createContext(null);
+
+function TourBackgroundSync({ state, dispatch }) {
+  useEffect(() => {
+    let active = true;
+    const fetchDatiPercorso = async () => {
+      if (state.tappe.length < 2) {
+         if (active && (state.distanzaKm !== 0 || state.pedaggiStima.total !== 0)) {
+             dispatch({ type: 'SET_TS_ESTIMATES', payload: { distanzaKm: 0, pedaggiStima: { total: 0, breakdown: {} } }});
+         }
+         return;
+      }
+      
+      const tappe = [...state.tappe].sort((a,b) => a.ordine - b.ordine);
+      const km = await calcolaDistanzaOSRM(tappe);
+      const p = await stimaPedaggi(tappe, km);
+      
+      if(active) {
+         dispatch({ type: 'SET_TS_ESTIMATES', payload: { distanzaKm: km, pedaggiStima: p }});
+      }
+    };
+    
+    fetchDatiPercorso();
+    return () => { active = false; };
+  }, [state.tappe, dispatch]); // we trigger on tappe changes
+
+  return null;
+}
 
 export function TourProvider({ children }) {
   const [state, dispatch] = useReducer(tourReducer, initialState, loadState);
@@ -125,6 +162,7 @@ export function TourProvider({ children }) {
 
   return (
     <TourContext.Provider value={{ state, dispatch }}>
+      <TourBackgroundSync state={state} dispatch={dispatch} />
       {children}
     </TourContext.Provider>
   );

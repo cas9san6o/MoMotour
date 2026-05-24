@@ -7,8 +7,8 @@ import { ChevronDown, Plus, Fuel, Map, Home, Utensils, Ticket, Wallet } from 'lu
 
 export function MoMofoglio() {
   const { state, dispatch } = useContext(TourContext);
-  const [distanzaKm, setDistanzaKm] = useState(0);
-  const [pedaggiStima, setPedaggiStima] = useState({ total: 0, breakdown: {} });
+  const distanzaKm = state.distanzaKm || 0;
+  const pedaggiStima = state.pedaggiStima || { total: 0, breakdown: {} };
   
   // Fuel Config
   const [consumo, setConsumo] = useState(7);
@@ -17,21 +17,6 @@ export function MoMofoglio() {
   // Manual items sheet
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [newVoce, setNewVoce] = useState({ desc: '', categoria: 'varie', importo: '', tappaId: '' });
-
-  // Load async distance & tolls
-  useEffect(() => {
-    let active = true;
-    const fetchDatiPercorso = async () => {
-      const tappe = [...state.tappe].sort((a,b) => a.ordine - b.ordine);
-      const km = await calcolaDistanzaOSRM(tappe);
-      if(active) setDistanzaKm(km);
-      
-      const p = await stimaPedaggi(tappe, km);
-      if(active) setPedaggiStima(p);
-    };
-    fetchDatiPercorso();
-    return () => { active = false; };
-  }, [state.tappe]);
 
   // Aggregation logic
   const attivitaList = useMemo(() => {

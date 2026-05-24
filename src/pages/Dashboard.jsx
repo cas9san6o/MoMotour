@@ -129,14 +129,28 @@ export function Dashboard() {
 
       <div 
         className="fixed left-0 right-0 z-20 flex justify-center transition-all duration-500 ease-in-out drop-shadow-md"
-        style={{ top: viewMode === 'list' ? '5rem' : `calc(${mapHeight} + 2rem)` }}
+        style={{ 
+          top: viewMode === 'list' ? '5rem' : viewMode === 'map' ? 'auto' : `calc(${mapHeight} + 2rem)`,
+          bottom: viewMode === 'map' ? '6rem' : 'auto'
+        }}
       >
-        <button 
-          onClick={handleToggleView}
-          className="bg-white px-5 py-2 rounded-full text-sm font-semibold text-[#222222] shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-gray-100 transition-transform active:scale-95"
-        >
-          {viewMode === 'split' ? '⟵ Mappa | Lista ⟶' : viewMode === 'map' ? '↓ Mostra Lista' : '↑ Mostra Mappa'}
-        </button>
+        {viewMode === 'split' ? (
+          <div className="bg-white rounded-full flex shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden">
+            <button onClick={() => setViewMode('map')} className="px-5 py-2 text-sm font-semibold text-[#222222] border-r border-gray-100 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+              Mappa
+            </button>
+            <button onClick={() => setViewMode('list')} className="px-5 py-2 text-sm font-semibold text-[#222222] hover:bg-gray-50 active:bg-gray-100 transition-colors">
+              Lista
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => setViewMode('split')}
+            className="bg-white px-5 py-2 rounded-full text-sm font-semibold text-[#222222] shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-gray-100 transition-transform active:scale-95"
+          >
+            {viewMode === 'map' ? '↓ Torna a Split View' : '↑ Torna a Split View'}
+          </button>
+        )}
       </div>
 
       <div 

@@ -104,17 +104,37 @@ export function ItinerariSalvati() {
     });
   };
 
+  const handleClearAllData = () => {
+    if (window.confirm("Attenzione: Questa operazione eliminerà TUTTI i tour salvati e azzererà l'itinerario corrente. I dati non potranno essere recuperati. Sei sicuro?")) {
+      try { window.navigator.vibrate([50, 50, 50, 50]); } catch(e) {}
+      window.localStorage.removeItem('momtour_saved_itineraries');
+      window.localStorage.removeItem('momtour_state');
+      setSavedTours([]);
+      dispatch({ type: 'CLEAR_ALL' }); // Assuming we have such an action or we can just reload
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full animate-fade-in pb-24">
       <div className="bg-white p-4 sticky top-0 z-10 border-b border-gray-100 flex justify-between items-center">
         <h1 className="text-2xl font-bold font-heading text-gray-900">I Miei Tour 📚</h1>
-        <button 
-          onClick={openSaveSheet}
-          disabled={state.tappe.length === 0}
-          className="bg-[var(--color-brand)] text-white px-3 py-1.5 rounded-lg font-medium text-sm disabled:opacity-50 flex items-center gap-1 shadow-sm"
-        >
-          <Save size={16} /> Salva Corrente
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleClearAllData}
+            className="text-red-500 bg-red-50 px-3 py-1.5 rounded-lg font-medium text-sm flex items-center gap-1 shadow-sm border border-red-100"
+            title="Elimina tutti i dati salvati"
+          >
+             Reset DB
+          </button>
+          <button 
+            onClick={openSaveSheet}
+            disabled={state.tappe.length === 0}
+            className="bg-[var(--color-brand)] text-white px-3 py-1.5 rounded-lg font-medium text-sm disabled:opacity-50 flex items-center gap-1 shadow-sm"
+          >
+            <Save size={16} /> Salva Corrente
+          </button>
+        </div>
       </div>
 
       <div className="p-4 flex-1 overflow-y-auto">
