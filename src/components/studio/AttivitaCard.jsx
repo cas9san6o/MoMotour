@@ -3,7 +3,7 @@ import { CATEGORIE_ATTIVITA } from '../../utils/categorie';
 import { Badge } from '../shared/Badge';
 import { Trash2, CheckCircle2, Circle } from 'lucide-react';
 
-export function AttivitaCard({ attivita, onEdit, onDelete, onTogglePrenotato }) {
+export const AttivitaCard = React.memo(function AttivitaCard({ attivita, onEdit, onDelete, onTogglePrenotato }) {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const swipeStartX = useRef(null);
   const swipeCurrentX = useRef(null);
@@ -103,4 +103,4 @@ export function AttivitaCard({ attivita, onEdit, onDelete, onTogglePrenotato }) 
       </div>
     </div>
   );
-}
+});

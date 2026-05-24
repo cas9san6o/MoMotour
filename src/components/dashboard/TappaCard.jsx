@@ -1,26 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, ArrowDown, ArrowUp } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-export function TappaCard({ tappa, index, distanzaPrecedente, distanzaSuccessiva, onEdit, onDelete }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: tappa.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 'auto',
-  };
-
+export const TappaCard = React.memo(function TappaCard({ tappa, index, distanzaPrecedente, distanzaSuccessiva, onEdit, onDelete }) {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const swipeStartX = useRef(null);
   const swipeCurrentX = useRef(null);
@@ -53,14 +36,12 @@ export function TappaCard({ tappa, index, distanzaPrecedente, distanzaSuccessiva
     }
   };
 
-  const dataArrivoFmt = format(parseISO(tappa.dataArrivo), "d MMM", { locale: it });
-  const dataPartenzaFmt = format(parseISO(tappa.dataPartenza), "d MMM", { locale: it });
+  const dataArrivoFmt = tappa.dataArrivo ? format(parseISO(tappa.dataArrivo), "d MMM", { locale: it }) : '';
+  const dataPartenzaFmt = tappa.dataPartenza ? format(parseISO(tappa.dataPartenza), "d MMM", { locale: it }) : '';
 
   return (
     <div 
-      ref={setNodeRef}
-      style={style}
-      className={`relative mb-3 flex w-full overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-100 ${isDragging ? 'shadow-md opacity-90 scale-[1.02]' : ''}`}
+      className={`relative mb-3 flex w-full overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-100`}
     >
       <div 
         className="absolute inset-y-0 right-0 w-[80px] bg-red-500 flex flex-col justify-center items-center text-white cursor-pointer z-0"
@@ -78,15 +59,7 @@ export function TappaCard({ tappa, index, distanzaPrecedente, distanzaSuccessiva
         onTouchEnd={handleTouchEnd}
       >
         <div 
-          className="flex items-center justify-center w-12 text-gray-400 active:text-[#FF5A5F] touch-none cursor-grab active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical size={20} />
-        </div>
-        
-        <div 
-          className="flex-1 py-4 pr-4 cursor-pointer flex justify-between items-center gap-2"
+          className="flex-1 py-4 px-4 cursor-pointer flex justify-between items-center gap-2"
           onClick={() => {
             if (swipeOffset === 0) onEdit(tappa);
           }}
@@ -125,4 +98,4 @@ export function TappaCard({ tappa, index, distanzaPrecedente, distanzaSuccessiva
       </div>
     </div>
   );
-}
+});

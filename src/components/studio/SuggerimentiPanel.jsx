@@ -1,93 +1,137 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CATEGORIE_ATTIVITA } from '../../utils/categorie';
 import { Badge } from '../shared/Badge';
 import { RefreshCw, Plus, Lightbulb } from 'lucide-react';
+
+const shuffleArray = (array) => {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
+// Cache application-level
+const cache = {};
 
 export function SuggerimentiPanel({ tappa, onAddAttivita }) {
   const [suggerimenti, setSuggerimenti] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [queryTypeIndex, setQueryTypeIndex] = useState(0);
 
-  const queryTypes = [
-    { catId: 'attrazione', query: 'tourism=attraction', radius: 2000, fallbackLimit: 6 },
-    { catId: 'ristorante', query: 'amenity=restaurant', radius: 1000, fallbackLimit: 6 },
-    { catId: 'museo', query: 'tourism=museum', radius: 2000, fallbackLimit: 6 },
-    { catId: 'attivita', query: 'leisure=park', radius: 2000, fallbackLimit: 6 }
-  ];
+  const seenIds = useRef(new Set());
 
   const fetchSuggerimenti = async (isRefresh = false) => {
-    if (!tappa) return;
+    if (!tappa || loading) return;
     
     setLoading(true);
     setError(null);
     
-    let currentQueryIndex = queryTypeIndex;
-    if (isRefresh) {
-      currentQueryIndex = (queryTypeIndex + 1) % queryTypes.length;
-      setQueryTypeIndex(currentQueryIndex);
-    }
-
-    const { catId, query, radius, fallbackLimit } = queryTypes[currentQueryIndex];
-
     try {
-      // 1. Prova con Overpass API
-      const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];node[${query}](around:${radius},${tappa.lat},${tappa.lng});out 8;`;
-      
-      const response = await fetch(overpassUrl);
-      if (!response.ok) throw new Error("Overpass API error");
-      
-      const data = await response.json();
-      
-      if (data.elements && data.elements.length > 0) {
-        const results = data.elements
-          .filter(e => e.tags && e.tags.name)
-          .map(e => ({
-            id: `overpass-${e.id}`,
-            nome: e.tags.name,
-            categoria: catId,
-            luogo: tappa.nome, // Potremmo usare indirizzo se disponibile, ma così è più pulito
-            isFallback: false
-          }))
-          .slice(0, 8);
-          
-        if (results.length > 0) {
-          setSuggerimenti(results);
-          setLoading(false);
-          return;
-        }
-      }
-      
-      throw new Error("Nessun risultato da Overpass");
+      const cacheKey = `sugg_${tappa.id}_${tappa.lat}_${tappa.lng}`;
+      let allResults = cache[cacheKey];
 
-    } catch (err) {
-      // 2. Fallback su Wikipedia API
-      try {
-        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${tappa.lat}|${tappa.lng}&gsradius=10000&gslimit=${fallbackLimit}&format=json&origin=*`;
-        const wikiResponse = await fetch(wikiUrl);
-        if (!wikiResponse.ok) throw new Error("Wiki API error");
+      // Fetch init if no cache
+      if (!allResults) {
+        // We use Overpass to fetch multiple categories at once around 2000m
+        const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];node(around:2000,${tappa.lat},${tappa.lng})[~"^(tourism|amenity|leisure)$"~"^(attraction|museum|restaurant|park)$"];out 100;`;
         
-        const wikiData = await wikiResponse.json();
-        
-        if (wikiData.query && wikiData.query.geosearch && wikiData.query.geosearch.length > 0) {
-          const results = wikiData.query.geosearch.map(article => ({
-            id: `wiki-${article.pageid}`,
-            nome: article.title,
-            categoria: 'attrazione', // Wikipedia è di solito roba culturale/attrazioni
-            luogo: tappa.nome,
-            distanza: Math.round(article.dist),
-            url: `https://en.wikipedia.org/?curid=${article.pageid}`,
-            isFallback: true
-          }));
-          
-          setSuggerimenti(results);
-        } else {
-          setSuggerimenti([]);
+        let response = null;
+        try {
+            response = await fetch(overpassUrl + `&t=${Date.now()}`);
+        } catch (e) {
+            console.warn("Network error overpass, falling back");
         }
-      } catch (fallbackErr) {
-        setError("Impossibile caricare i suggerimenti al momento.");
-        setSuggerimenti([]);
+
+        if (response && response.ok) {
+            const data = await response.json();
+            if (data.elements && data.elements.length > 0) {
+              const rawResults = data.elements
+                .filter(e => e.tags && e.tags.name)
+                .map(e => {
+                  let catId = 'altro';
+                  if (e.tags.tourism === 'museum') catId = 'museo';
+                  else if (e.tags.tourism === 'attraction') catId = 'attrazione';
+                  else if (e.tags.amenity === 'restaurant') catId = 'ristorante';
+                  else if (e.tags.leisure === 'park') catId = 'attivita';
+
+                  return {
+                    id: `overpass-${e.id}`,
+                    nome: e.tags.name,
+                    categoria: catId,
+                    luogo: tappa.nome,
+                    isFallback: false
+                  };
+                });
+              
+              // Remove duplicates (by name lower case)
+              allResults = rawResults.filter(
+                  (item, index, self) =>
+                    index === self.findIndex(x => x.nome.toLowerCase() === item.nome.toLowerCase())
+              );
+            }
+        }
+
+        // Fallback or additional data from Wiki if Overpass failed or returned very few
+        if (!allResults || allResults.length < 10) {
+            try {
+                const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${tappa.lat}|${tappa.lng}&gsradius=10000&gslimit=50&format=json&origin=*&t=${Date.now()}`;
+                const wikiResponse = await fetch(wikiUrl);
+                if (wikiResponse.ok) {
+                   const wikiData = await wikiResponse.json();
+                   if (wikiData.query && wikiData.query.geosearch) {
+                      const wikiResults = wikiData.query.geosearch.map(article => ({
+                        id: `wiki-${article.pageid}`,
+                        nome: article.title,
+                        categoria: 'attrazione',
+                        luogo: tappa.nome,
+                        isFallback: true,
+                        url: `https://en.wikipedia.org/?curid=${article.pageid}`
+                      }));
+                      
+                      // merge avoiding duplicates
+                      if (!allResults) allResults = [];
+                      const existingNames = new Set(allResults.map(x => x.nome.toLowerCase()));
+                      wikiResults.forEach(w => {
+                         if (!existingNames.has(w.nome.toLowerCase())) {
+                            allResults.push(w);
+                            existingNames.add(w.nome.toLowerCase());
+                         }
+                      });
+                   }
+                }
+            } catch (e) {
+                console.error("Wiki fallback failed");
+            }
+        }
+        
+        if (allResults && allResults.length > 0) {
+           cache[cacheKey] = allResults;
+        } else {
+           throw new Error("Nessun risultato disponibile");
+        }
       }
+
+      // We have allResults. Let's filter seen ones and shuffle
+      let freshResults = allResults.filter(r => !seenIds.current.has(r.id));
+      
+      // If we ran out of fresh results, reset seenIds to loop again
+      if (freshResults.length === 0) {
+          seenIds.current.clear();
+          freshResults = allResults;
+      }
+      
+      freshResults = shuffleArray(freshResults);
+      const batch = freshResults.slice(0, 4);
+      
+      batch.forEach(r => seenIds.current.add(r.id));
+      
+      setSuggerimenti(batch);
+      
+    } catch (err) {
+      setError(err.message || "Impossibile caricare i suggerimenti.");
+      setSuggerimenti([]);
     } finally {
       setLoading(false);
     }
@@ -134,7 +178,7 @@ export function SuggerimentiPanel({ tappa, onAddAttivita }) {
       ) : suggerimenti.length > 0 ? (
         <div className="space-y-3">
           {suggerimenti.map((sugg) => {
-            const cat = CATEGORIE_ATTIVITA[sugg.categoria];
+            const cat = CATEGORIE_ATTIVITA[sugg.categoria] || CATEGORIE_ATTIVITA['altro'];
             return (
               <div key={sugg.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-gray-100 rounded-xl hover:border-gray-200 transition-colors gap-3">
                 <div className="flex-1 min-w-0">
@@ -142,9 +186,6 @@ export function SuggerimentiPanel({ tappa, onAddAttivita }) {
                     <Badge className={`${cat.bg} ${cat.color} text-[10px]`}>
                       {cat.icon} {cat.label}
                     </Badge>
-                    {sugg.distanza && (
-                      <span className="text-[10px] text-gray-500">{sugg.distanza}m</span>
-                    )}
                   </div>
                   <h4 className="font-semibold text-sm text-[#222222] truncate">{sugg.nome}</h4>
                   {sugg.isFallback && (

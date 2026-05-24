@@ -34,7 +34,7 @@ export function MoMofoglio() {
   }, [state.tappe]);
 
   // Aggregation logic
-  const getAttivitaByTappa = () => {
+  const attivitaList = useMemo(() => {
     let items = [];
     Object.keys(state.attivita).forEach(tappaId => {
       const t = state.attivita[tappaId];
@@ -51,17 +51,20 @@ export function MoMofoglio() {
       }
     });
     return items;
-  };
+  }, [state.attivita, state.tappe]);
 
-  const attivitaList = getAttivitaByTappa();
   // Filter activities
-  const attivitaCibo = attivitaList.filter(a => a.categoria === 'ristorante');
-  const attivitaEsp = attivitaList.filter(a => ['museo', 'natura', 'spettacolo', 'altro'].includes(a.categoria));
+  const attivitaCibo = useMemo(() => attivitaList.filter(a => a.categoria === 'ristorante'), [attivitaList]);
+  const attivitaEsp = useMemo(() => attivitaList.filter(a => ['museo', 'natura', 'spettacolo', 'altro'].includes(a.categoria)), [attivitaList]);
 
-  const manualAlloggi = state.budgetItems.filter(b => b.categoria === 'alloggio');
-  const manualCibo = state.budgetItems.filter(b => b.categoria === 'cibo');
-  const manualEsp = state.budgetItems.filter(b => b.categoria === 'esperienza');
-  const manualVarie = state.budgetItems.filter(b => b.categoria === 'varie');
+  const { manualAlloggi, manualCibo, manualEsp, manualVarie } = useMemo(() => {
+    return {
+      manualAlloggi: state.budgetItems.filter(b => b.categoria === 'alloggio'),
+      manualCibo: state.budgetItems.filter(b => b.categoria === 'cibo'),
+      manualEsp: state.budgetItems.filter(b => b.categoria === 'esperienza'),
+      manualVarie: state.budgetItems.filter(b => b.categoria === 'varie')
+    };
+  }, [state.budgetItems]);
 
   const sumArray = (arr, field = 'importo') => arr.reduce((acc, curr) => acc + (parseFloat(curr[field]) || 0), 0);
   const sumAtt = (arr) => arr.reduce((acc, curr) => acc + (parseFloat(curr.costo) || 0), 0);

@@ -4,11 +4,36 @@ import { differenceInDays, parseISO } from 'date-fns';
 import { vibrate } from '../../utils/haptics';
 import { Check } from 'lucide-react';
 
-export function TappaForm({ onSubmit, initialData = null }) {
+const formatDateStr = (isoOrDateStr) => {
+  if (!isoOrDateStr) return '';
+  if (!isoOrDateStr.includes('T')) return isoOrDateStr;
+  const d = new Date(isoOrDateStr);
+  if (isNaN(d.getTime())) return isoOrDateStr.split('T')[0];
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export function TappaForm({ onSubmit, initialData = null, lastTappaDataPartenza = null }) {
   const [search, setSearch] = useState('');
   const [selectedPlace, setSelectedPlace] = useState(null);
-  const [dataArrivo, setDataArrivo] = useState('');
-  const [dataPartenza, setDataPartenza] = useState('');
+  
+  const initialArrivo = initialData ? formatDateStr(initialData.dataArrivo) : 
+                        lastTappaDataPartenza ? formatDateStr(lastTappaDataPartenza) : 
+                        formatDateStr(new Date().toISOString());
+                        
+  const [dataArrivo, setDataArrivo] = useState(initialArrivo);
+  
+  const getNextDay = (dateStr) => {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + 1);
+      return formatDateStr(d.toISOString());
+  };
+  
+  const initialPartenza = initialData ? formatDateStr(initialData.dataPartenza) : getNextDay(initialArrivo);
+  const [dataPartenza, setDataPartenza] = useState(initialPartenza);
   const [note, setNote] = useState('');
   
   const [isShaking, setIsShaking] = useState(false);
@@ -40,8 +65,8 @@ export function TappaForm({ onSubmit, initialData = null }) {
         lng: initialData.lng,
         indirizzo: initialData.indirizzo
       });
-      setDataArrivo(initialData.dataArrivo.split('T')[0]);
-      setDataPartenza(initialData.dataPartenza.split('T')[0]);
+      setDataArrivo(formatDateStr(initialData.dataArrivo));
+      setDataPartenza(formatDateStr(initialData.dataPartenza));
       setNote(initialData.note || '');
     }
   }, [initialData]);
@@ -69,8 +94,8 @@ export function TappaForm({ onSubmit, initialData = null }) {
       lat: selectedPlace.lat,
       lng: selectedPlace.lng,
       indirizzo: selectedPlace.indirizzo || selectedPlace.nome,
-      dataArrivo: parseISO(dataArrivo).toISOString(),
-      dataPartenza: parseISO(dataPartenza).toISOString(),
+      dataArrivo: dataArrivo,
+      dataPartenza: dataPartenza,
       notti: notti,
       note: note,
       ordine: initialData ? initialData.ordine : 0

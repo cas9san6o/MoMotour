@@ -16,7 +16,9 @@ export function MoMoStudio() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingAttivita, setEditingAttivita] = useState(null);
 
-  const tappe = [...state.tappe].sort((a, b) => a.ordine - b.ordine);
+  const tappe = React.useMemo(() => {
+    return [...state.tappe].sort((a, b) => a.ordine - b.ordine);
+  }, [state.tappe]);
   
   // Set initial selected tappa based on URL or first available
   useEffect(() => {
@@ -38,7 +40,7 @@ export function MoMoStudio() {
   const selectedTappa = tappe.find(t => t.id === selectedTappaId);
   const attivitaList = selectedTappaId ? (state.attivita[selectedTappaId] || []) : [];
 
-  const handleSaveAttivita = (attivitaProps) => {
+  const handleSaveAttivita = React.useCallback((attivitaProps) => {
     if (!selectedTappaId) return;
 
     if (editingAttivita?.id) {
@@ -54,17 +56,17 @@ export function MoMoStudio() {
     }
     setIsSheetOpen(false);
     setEditingAttivita(null);
-  };
+  }, [selectedTappaId, editingAttivita?.id, dispatch]);
 
-  const handleDeleteAttivita = (attivitaId) => {
+  const handleDeleteAttivita = React.useCallback((attivitaId) => {
     if (!selectedTappaId) return;
     dispatch({ 
       type: 'REMOVE_ATTIVITA', 
       payload: { tappaId: selectedTappaId, attivitaId } 
     });
-  };
+  }, [selectedTappaId, dispatch]);
 
-  const handleTogglePrenotato = (attivita) => {
+  const handleTogglePrenotato = React.useCallback((attivita) => {
     if (!selectedTappaId) return;
     dispatch({
       type: 'UPDATE_ATTIVITA',
@@ -73,12 +75,12 @@ export function MoMoStudio() {
         attivita: { ...attivita, prenotato: !attivita.prenotato } 
       }
     });
-  };
+  }, [selectedTappaId, dispatch]);
 
-  const openAddSheet = (initialData = null) => {
+  const openAddSheet = React.useCallback((initialData = null) => {
     setEditingAttivita(initialData);
     setIsSheetOpen(true);
-  };
+  }, []);
 
   if (tappe.length === 0) {
     return (

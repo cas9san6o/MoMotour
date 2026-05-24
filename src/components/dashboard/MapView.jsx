@@ -28,7 +28,7 @@ function MapBounds({ tappe }) {
   return null;
 }
 
-export function MapView({ tappe, onEditClick }) {
+export const MapView = React.memo(function MapView({ tappe, onEditClick }) {
   const [routePositions, setRoutePositions] = useState([]);
   
   useEffect(() => {
@@ -149,4 +149,4 @@ export function MapView({ tappe, onEditClick }) {
       </MapContainer>
     </div>
   );
-}
+});
